@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { Copy, Check, ExternalLink, Heart, Image as ImageIcon } from 'lucide-react';
+import { Copy, Check, ExternalLink, Heart, Image as ImageIcon, X } from 'lucide-react';
 
 interface PromptItem {
   id: string;
@@ -11,17 +11,19 @@ interface PromptItem {
   timestamp: string;
 }
 
-// 1. Individual Card Component
+// 1. Single Card Component with Tap to Zoom Modal
 export default function PromptCard({ item, onFavChange }: { item: PromptItem; onFavChange?: () => void }) {
   const [copied, setCopied] = useState(false);
   const [isFav, setIsFav] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   useEffect(() => {
     const currentFavs = JSON.parse(localStorage.getItem('fav_prompts') || '[]');
     setIsFav(currentFavs.includes(item.id));
   }, [item.id]);
 
-  const handleCopy = async () => {
+  const handleCopy = async (e?: React.MouseEvent) => {
+    if (e) e.stopPropagation(); // Card tap event ko rokne ke liye
     try {
       await navigator.clipboard.writeText(item.prompt);
       setCopied(true);
@@ -31,7 +33,8 @@ export default function PromptCard({ item, onFavChange }: { item: PromptItem; on
     }
   };
 
-  const toggleFavorite = () => {
+  const toggleFavorite = (e: React.MouseEvent) => {
+    e.stopPropagation();
     const currentFavs = JSON.parse(localStorage.getItem('fav_prompts') || '[]');
     let updatedFavs: string[] = [];
 
@@ -51,83 +54,102 @@ export default function PromptCard({ item, onFavChange }: { item: PromptItem; on
   };
 
   return (
-    <div className="flex flex-col bg-[#111827] border border-gray-800/80 rounded-2xl overflow-hidden hover:border-gray-700 transition duration-300 group">
-      <div className="relative aspect-square w-full overflow-hidden bg-gray-950">
-        <img
-          src={item.imageUrl}
-          alt={item.prompt}
-          loading="lazy"
-          className="w-full h-full object-cover group-hover:scale-[1.03] transition duration-500"
-        />
-        
-        <div className="absolute top-3 left-3">
-          <span className="text-[10px] font-bold px-2.5 py-1 bg-black/75 backdrop-blur-md text-teal-400 rounded-md border border-teal-500/20 uppercase tracking-wider">
-            {item.category}
-          </span>
-        </div>
+    <>
+      {/* 2x2 Grid Friendly Card */}
+      <div 
+        onClick={() => setIsModalOpen(true)}
+        className="flex flex-col bg-[#0f172a] border border-gray-800 rounded-xl overflow-hidden active:scale-95 hover:border-gray-700 transition duration-200 cursor-pointer relative group"
+      >
+        {/* Image Aspect ratio is perfectly square */}
+        <div className="relative aspect-square w-full overflow-hidden bg-gray-950">
+          <img
+            src={item.imageUrl}
+            alt={item.prompt}
+            loading="lazy"
+            className="w-full h-full object-cover"
+          />
+          
+          {/* Tag */}
+          <div className="absolute bottom-2 left-2 right-2 flex justify-between items-center z-10">
+            <span className="text-[9px] font-bold px-2 py-0.5 bg-black/80 backdrop-blur-md text-teal-400 rounded border border-teal-500/10 truncate max-w-[70%]">
+              {item.category}
+            </span>
+          </div>
 
-        <div className="absolute top-3 right-3 flex items-center gap-2">
+          {/* Quick Fav Icon */}
           <button
             onClick={toggleFavorite}
-            className="p-1.5 bg-black/70 hover:bg-black text-gray-300 rounded-md backdrop-blur-md transition duration-200"
+            className="absolute top-2 right-2 p-1.5 bg-black/60 active:bg-black text-gray-300 rounded-lg backdrop-blur-md transition z-20"
           >
-            <Heart size={16} className={isFav ? 'fill-red-500 text-red-500' : 'text-gray-300'} />
-          </button>
-
-          <a 
-            href={item.imageUrl} 
-            target="_blank" 
-            rel="noopener noreferrer" 
-            className="p-1.5 bg-black/70 hover:bg-black text-gray-300 hover:text-white rounded-md backdrop-blur-md transition duration-200"
-          >
-            <ExternalLink size={16} />
-          </a>
-        </div>
-      </div>
-
-      <div className="p-5 flex flex-col flex-grow">
-        <div className="flex-grow">
-          <p className="text-sm text-gray-300 leading-relaxed line-clamp-4 font-mono select-all bg-black/20 p-3 rounded-lg border border-gray-900">
-            "{item.prompt}"
-          </p>
-        </div>
-
-        <div className="mt-4 pt-4 border-t border-gray-800/60 flex items-center justify-between">
-          <span className="text-[10px] text-gray-500 font-mono">
-            {new Date(item.timestamp).toLocaleDateString(undefined, {
-              month: 'short',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            })}
-          </span>
-          <button
-            onClick={handleCopy}
-            className={`flex items-center gap-1.5 text-xs font-medium px-4 py-2 rounded-lg transition-all duration-200 ${
-              copied
-                ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
-                : 'bg-indigo-600 hover:bg-indigo-500 text-white border border-transparent'
-            }`}
-          >
-            {copied ? (
-              <>
-                <Check size={14} />
-                <span>Copied</span>
-              </>
-            ) : (
-              <>
-                <Copy size={14} />
-                <span>Copy</span>
-              </>
-            )}
+            <Heart size={14} className={isFav ? 'fill-red-500 text-red-500' : 'text-gray-300'} />
           </button>
         </div>
       </div>
-    </div>
+
+      {/* Modern Dialog/Modal Popup */}
+      {isModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/90 backdrop-blur-md overflow-y-auto">
+          <div className="relative w-full max-w-lg bg-[#0f172a] border border-gray-800 rounded-3xl overflow-hidden shadow-2xl">
+            {/* Close Button */}
+            <button 
+              onClick={() => setIsModalOpen(false)}
+              className="absolute top-4 right-4 z-10 p-2 bg-gray-900/80 hover:bg-gray-800 text-gray-400 hover:text-white rounded-full transition"
+            >
+              <X size={20} />
+            </button>
+
+            {/* Modal Image */}
+            <div className="relative aspect-square w-full bg-black">
+              <img 
+                src={item.imageUrl} 
+                alt={item.prompt} 
+                className="w-full h-full object-cover"
+              />
+              <span className="absolute top-4 left-4 text-xs font-bold px-3 py-1 bg-black/80 backdrop-blur-md text-teal-400 rounded-full border border-teal-500/20 uppercase tracking-wide">
+                {item.category}
+              </span>
+            </div>
+
+            {/* Modal Details */}
+            <div className="p-6">
+              <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-2">Prompt Details</h3>
+              <p className="text-sm text-gray-200 font-mono bg-black/30 p-4 rounded-2xl border border-gray-800 leading-relaxed max-h-40 overflow-y-auto select-all">
+                {item.prompt}
+              </p>
+
+              <div className="mt-6 flex gap-3">
+                {/* Copy Button */}
+                <button
+                  onClick={() => handleCopy()}
+                  className={`flex-grow flex items-center justify-center gap-2 text-sm font-medium py-3 rounded-xl transition duration-200 ${
+                    copied
+                      ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
+                      : 'bg-indigo-600 hover:bg-indigo-500 text-white'
+                  }`}
+                >
+                  {copied ? <Check size={16} /> : <Copy size={16} />}
+                  <span>{copied ? 'Copied to Clipboard' : 'Copy Full Prompt'}</span>
+                </button>
+
+                {/* External Link */}
+                <a 
+                  href={item.imageUrl} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="px-4 py-3 bg-gray-900 hover:bg-gray-800 text-gray-300 hover:text-white rounded-xl border border-gray-800 transition flex items-center justify-center"
+                >
+                  <ExternalLink size={18} />
+                </a>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
   );
 }
 
-// 2. Interactive Gallery Wrapper
+// 2. Premium 2x2 Grid Gallery Layout
 export function PromptGallery({ initialItems }: { initialItems: PromptItem[] }) {
   const [activeTab, setActiveTab] = useState<'all' | 'favs'>('all');
   const [favIds, setFavIds] = useState<string[]>([]);
@@ -147,42 +169,42 @@ export function PromptGallery({ initialItems }: { initialItems: PromptItem[] }) 
 
   return (
     <>
-      {/* Tabs Filter */}
-      <div className="flex justify-center gap-4 mb-8">
+      {/* Modern Filter Tabs */}
+      <div className="flex justify-center gap-3 mb-8">
         <button
           onClick={() => setActiveTab('all')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition duration-200 ${
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition duration-200 ${
             activeTab === 'all'
-              ? 'bg-indigo-600 text-white'
+              ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/20'
               : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
           }`}
         >
-          <ImageIcon size={16} />
+          <ImageIcon size={14} />
           <span>All Prompts ({initialItems.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('favs')}
-          className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition duration-200 ${
+          className={`flex items-center gap-1.5 px-4 py-2 rounded-full text-xs font-semibold transition duration-200 ${
             activeTab === 'favs'
-              ? 'bg-red-500/10 text-red-400 border border-red-500/30'
+              ? 'bg-red-500/10 text-red-400 border border-red-500/20'
               : 'bg-gray-900 text-gray-400 border border-gray-800 hover:text-white'
           }`}
         >
-          <Heart size={16} className={activeTab === 'favs' ? 'fill-red-500 text-red-400' : ''} />
+          <Heart size={14} className={activeTab === 'favs' ? 'fill-red-500 text-red-400' : ''} />
           <span>My Favorites ({favIds.length})</span>
         </button>
       </div>
 
-      {/* Grid */}
+      {/* Grid Optimized: 2 columns on Mobile, 3 on Tablet, 4 on Desktop */}
       {displayedPrompts.length === 0 ? (
-        <div className="text-center py-16 border border-dashed border-gray-800 rounded-2xl bg-gray-900/20">
-          <p className="text-gray-400 text-sm">
-            {activeTab === 'favs' ? 'Aapne abhi tak koi post favorite nahi kiya hai.' : 'Koi prompts nahi mile.'}
+        <div className="text-center py-16 border border-dashed border-gray-800 rounded-2xl bg-[#0f172a]/40">
+          <p className="text-gray-400 text-xs">
+            {activeTab === 'favs' ? 'Koi favorite posts nahi hain.' : 'Koi prompts nahi mile.'}
           </p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-6">
           {displayedPrompts.map((item) => (
             <PromptCard 
               key={item.id} 
